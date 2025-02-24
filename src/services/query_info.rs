@@ -1,16 +1,15 @@
 use crate::atservice::ATService;
 use crate::models::*;
 pub struct QueryInfo {
-    at_service: ATService,
 }
 
 impl QueryInfo {
-    pub fn new(at_service: ATService) -> Self {
-        Self { at_service }
+    pub fn new() -> Self {
+        QueryInfo {}
     }
 
-    pub async fn get_device_info(&mut self) -> Result<DeviceInfo, Box<dyn std::error::Error>> {
-        let resp = self.at_service.send_command("ATI")?;
+    pub async fn get_device_info(&self, at_service: &mut ATService) -> Result<DeviceInfo, Box<dyn std::error::Error>> {
+        let resp = at_service.send_command("ATI")?;
 
         let mut manufacturer = String::new();
         let mut model = String::new();
@@ -41,8 +40,8 @@ impl QueryInfo {
         })
     }
 
-    pub async fn get_connstat(&mut self) -> Result<ConnectionStatus, Box<dyn std::error::Error>> {
-        let resp = self.at_service.send_command("AT^NDISSTATQRY=8")?;
+    pub async fn get_connstat(&mut self, at_service: &mut ATService) -> Result<ConnectionStatus, Box<dyn std::error::Error>> {
+        let resp = at_service.send_command("AT^NDISSTATQRY=8")?;
         
         let mut ipv4_stat = String::new(); // 0: disconnected, 1: connected, 2: connecting, 3: disconnecting
         let mut ipv4_err = String::new(); // 0: unknown_err
@@ -69,10 +68,10 @@ impl QueryInfo {
         })
     }
 
-    pub async fn get_config_info(&mut self) -> Result<ConfigInfo, Box<dyn std::error::Error>> {
-        let pcie_cfg = self.at_service.send_command("AT^TDPCIELANCFG?")?;
-        let pm_cfg = self.at_service.send_command("AT^TDPMCFG?")?;
-        let autodial_cfg = self.at_service.send_command("AT^SETAUTODIAL?")?;
+    pub async fn get_config_info(&self, at_service: &mut ATService) -> Result<ConfigInfo, Box<dyn std::error::Error>> {
+        let pcie_cfg = at_service.send_command("AT^TDPCIELANCFG?")?;
+        let pm_cfg = at_service.send_command("AT^TDPMCFG?")?;
+        let autodial_cfg = at_service.send_command("AT^SETAUTODIAL?")?;
 
         let mut pcie_lan_mode = 1;
         let mut pcie_pm_enabled = false;
