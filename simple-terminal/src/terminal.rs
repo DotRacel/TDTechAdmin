@@ -21,8 +21,6 @@ impl Terminal {
             output_history: Vec::new(),
         }
     }
-
-    // 显示内容的函数，支持彩色输出
     fn display_output(&mut self, message: &str, color: Color) {
         self.output_history.push((message.to_string(), color));
         execute!(
@@ -49,10 +47,10 @@ impl Terminal {
                 self.output_history.clear();
             }
             "help" => {
-                self.display_output("available commands:", Color::Yellow);
-                self.display_output("  help", Color::Yellow);
-                self.display_output("  clear", Color::Yellow);
-                self.display_output("  exit", Color::Yellow);
+                self.display_output("available commands:", Color::White);
+                self.display_output("  help", Color::White);
+                self.display_output("  clear", Color::White);
+                self.display_output("  exit", Color::White);
             }
             "" => {}
             _ => {
@@ -62,11 +60,10 @@ impl Terminal {
         true
     }
 
-    // 重新绘制整个终端界面
     fn redraw(&self) -> io::Result<()> {
         execute!(io::stdout(), terminal::Clear(ClearType::All))?;
 
-        // 显示历史输出
+        // show history
         for (i, (message, color)) in self.output_history.iter().enumerate() {
             execute!(
                 io::stdout(), 
@@ -76,7 +73,7 @@ impl Terminal {
             print!("{}", message);
         }
 
-        // 显示提示符和当前输入
+        // show prompt
         let prompt_line = self.output_history.len() as u16;
         execute!(
             io::stdout(),
@@ -91,7 +88,7 @@ impl Terminal {
         )?;
         print!("{}", self.input_buffer);
 
-        // 将光标定位到输入的末尾
+        // fix cursor to end
         execute!(
             io::stdout(),
             cursor::MoveTo(self.input_buffer.len() as u16 + 2, prompt_line)
@@ -101,21 +98,17 @@ impl Terminal {
         Ok(())
     }
 
-    // 运行终端
     pub(crate) fn run(&mut self) -> io::Result<()> {
-        // 进入备用屏幕并设置原始模式
         terminal::enable_raw_mode()?;
         execute!(io::stdout(), terminal::EnterAlternateScreen)?;
 
-        // 显示欢迎信息
-        self.display_output("Simple Terminal | Type 'help' to get help", Color::Blue);
+        self.display_output("TDTech Terminal | Type 'help' to get commands list", Color::White);
 
         let mut running = true;
         while running {
-            // 绘制界面
             self.redraw()?;
 
-            // 处理事件
+            // handle keystroke events
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
@@ -134,13 +127,13 @@ impl Terminal {
                         KeyCode::Esc => {
                             running = false;
                         },
-                        _ => {} // 忽略其他按键
+                        _ => {} // ignore other keys
                     }
                 }
             }
         }
 
-        // 退出前的清理工作
+        // clean up before exit
         terminal::disable_raw_mode()?;
         execute!(io::stdout(), terminal::LeaveAlternateScreen)?;
 
