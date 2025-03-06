@@ -2,10 +2,10 @@
 
 use crate::error::AtError;
 use crate::serial::{SerialConfig, SerialConnection};
-use log::{debug, info};
+use log::{debug};
 use std::io::{self, Write};
 use std::str;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
