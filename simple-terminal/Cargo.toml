@@ -1,0 +1,12 @@
+[package]
+name = "simple-terminal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+crossterm = "0.28.1"
+at-serial = { path = "../at-serial" }
+
+[[bin]]
+name = "simple-terminal"
+src = "./src/main.rs"
