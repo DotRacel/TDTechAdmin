@@ -32,7 +32,7 @@ impl DataHandler for ChannelHandler {
 impl Terminal {
     pub(crate) fn new() -> Self {
         let (sender, receiver) = mpsc::channel();
-        
+
         let mut terminal = Self {
             input_buffer: String::new(),
             command_history: Vec::new(),
@@ -46,7 +46,7 @@ impl Terminal {
             ).unwrap(),
             data_receiver: receiver,
         };
-        
+
         let handler = ChannelHandler { sender };
         terminal.at_terminal.start_reader(handler).unwrap();
 
@@ -92,24 +92,60 @@ impl Terminal {
         true
     }
 
+    // Count how many lines a string will take when displayed
+    fn count_display_lines(&self, text: &str) -> u16 {
+        // Get terminal width to calculate wrapping
+        let (width, _) = terminal::size().unwrap_or((80, 24));
+
+        let mut line_count = 0;
+        for line in text.lines() {
+            // Empty lines still count as 1 line
+            if line.is_empty() {
+                line_count += 1;
+                continue;
+            }
+
+            // Calculate how many terminal lines this logical line will take
+            let chars_count = line.chars().count() as u16;
+            let wrapped_lines = (chars_count + width - 1) / width; // Ceiling division
+            line_count += std::cmp::max(1, wrapped_lines); // At least 1 line
+        }
+
+        // If text is empty, it still takes 1 line
+        std::cmp::max(1, line_count)
+    }
+
     fn redraw(&self) -> io::Result<()> {
         execute!(io::stdout(), terminal::Clear(ClearType::All))?;
 
+        // Track current line position
+        let mut current_line = 0;
+
         // show history
-        for (i, (message, color)) in self.output_history.iter().enumerate() {
+        for (message, color) in &self.output_history {
             execute!(
                 io::stdout(), 
-                cursor::MoveTo(0, i as u16),
+                cursor::MoveTo(0, current_line),
                 style::SetForegroundColor(*color)
             )?;
-            print!("{}", message);
+
+            // Print the message line by line to handle newlines properly
+            for line in message.lines() {
+                execute!(io::stdout(), cursor::MoveTo(0, current_line))?;
+                print!("{}", line);
+                current_line += 1;
+            }
+
+            // If message doesn't end with newline, we still need to move to next line
+            if !message.ends_with('\n') {
+                current_line += 1;
+            }
         }
 
         // show prompt
-        let prompt_line = self.output_history.len() as u16;
         execute!(
             io::stdout(),
-            cursor::MoveTo(0, prompt_line),
+            cursor::MoveTo(0, current_line),
             style::SetForegroundColor(Color::Cyan)
         )?;
         print!("> ");
@@ -123,7 +159,7 @@ impl Terminal {
         // fix cursor to end
         execute!(
             io::stdout(),
-            cursor::MoveTo(self.input_buffer.len() as u16 + 2, prompt_line)
+            cursor::MoveTo(self.input_buffer.len() as u16 + 2, current_line)
         )?;
 
         io::stdout().flush()?;
@@ -136,7 +172,8 @@ impl Terminal {
         while let Ok(data) = self.data_receiver.try_recv() {
             match data {
                 ReceivedData::Text(text) => {
-                    self.display_output(&format!("{}", text),  Color::White);
+                    // Process multiline text properly
+                    self.display_output(&format!("{}", text), Color::White);
                     let _ = io::stdout().flush();
                 }
                 ReceivedData::Binary(bytes) => {
