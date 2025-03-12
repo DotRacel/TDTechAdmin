@@ -1,3 +1,4 @@
+use std::fmt::format;
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEventKind},
@@ -135,7 +136,7 @@ impl Terminal {
         while let Ok(data) = self.data_receiver.try_recv() {
             match data {
                 ReceivedData::Text(text) => {
-                    print!("{}", text);
+                    self.display_output(&format!("{}", text),  Color::White);
                     let _ = io::stdout().flush();
                 }
                 ReceivedData::Binary(bytes) => {
